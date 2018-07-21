@@ -3,8 +3,11 @@ package org.swdc.note.ui.start;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
+import org.swdc.note.entity.ClipsContent;
 import org.swdc.note.entity.GlobalType;
+import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.EditorForm;
+import org.swdc.note.ui.ReadFrm;
 
 import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
@@ -42,6 +45,16 @@ public class SToolBar extends JToolBar {
 
     @Autowired
     private EditorForm editorForm;
+
+    @Autowired
+    private ReadFrm readFrm;
+
+    @Autowired
+    private ClipsService clipsService;
+
+    private GlobalType currType;
+
+    private Long currId;
 
     public SToolBar() {
         this.setFloatable(false);
@@ -81,7 +94,6 @@ public class SToolBar extends JToolBar {
 
     @PostConstruct
     public void regListener() {
-        this.addBtn.addActionListener(e -> editorForm.setVisible(true));
         // 鼠标按钮上面，置聚焦标记为真
         Arrays.asList(this.getComponents()).stream()
                 .filter(item -> item instanceof JButton)
@@ -106,6 +118,44 @@ public class SToolBar extends JToolBar {
         });
     }
 
+    @PostConstruct
+    public void toolEvents() {
+        // 新建窗口
+        this.addBtn.addActionListener(e -> {
+            try {
+                // 初始化编辑窗口为创建
+                editorForm.prepare(null, this.currType);
+                editorForm.setVisible(true);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        // 新窗口阅读
+        newWindowBtn.addActionListener(e -> {
+            try {
+                switch (currType) {
+                    case CLIPS:
+                        ClipsContent content = clipsService.loadContent(currId);
+                        readFrm.prepare(content.getContent());
+                        readFrm.setVisible(true);
+                        break;
+                }
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        // 编辑或修改
+        editBtn.addActionListener(e -> {
+            try {
+                // 初始化编辑窗口
+                editorForm.prepare(currId, currType);
+                editorForm.setVisible(true);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+    }
+
     /**
      * 启用工具栏
      *
@@ -118,6 +168,8 @@ public class SToolBar extends JToolBar {
         this.newWindowBtn.setEnabled(enable);
         this.editBtn.setEnabled(enable);
         this.exportBtn.setEnabled(enable);
+        this.currType = type;
+        this.currId = id;
     }
 
     public boolean isFocused() {

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.ClipsType;
+import org.swdc.note.entity.GlobalType;
 import org.swdc.note.entity.Tags;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.common.TreeNode;
@@ -90,6 +91,20 @@ public class SWestPane extends JPanel {
     @PostConstruct
     public void dataRefresh() {
         typeTree.setModel(new DefaultTreeModel(clipsService.getClipTree()));
+    }
+
+    /**
+     * 返回全局类型
+     *
+     * @return
+     */
+    public GlobalType getCurrentGlobalType() {
+        String name = tabbedPane.getTitleAt(tabbedPane.getSelectedIndex());
+        switch (name) {
+            case "摘录":
+                return GlobalType.CLIPS;
+        }
+        return null;
     }
 
 }

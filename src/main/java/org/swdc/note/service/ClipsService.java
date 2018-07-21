@@ -77,7 +77,7 @@ public class ClipsService {
      *
      * @return
      */
-    public List<String> getTags() {
+    public List<String> getClipsTags() {
         return tagsRepository.findByType(GlobalType.CLIPS)
                 .stream().map(item -> item.getName()).collect(Collectors.toList());
     }
@@ -98,6 +98,12 @@ public class ClipsService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 加载具体内容
+     *
+     * @param id
+     * @return
+     */
     @Transactional
     public ClipsContent loadContent(Long id) {
         ClipsArtle artle = artleRepository.getOne(id);
@@ -106,37 +112,97 @@ public class ClipsService {
     }
 
     /**
-     * 存储内容
+     * 修改内容
+     *
+     * @param tagName    标签名
+     * @param typeName   类型
+     * @param xdocString 内容
+     * @param title      标题
+     * @param id         id
      */
-    public void saveContent(String tagName, String typeName, String xdocString, String title) {
-        // 读取目标的标签，没有就创建
+    @Transactional
+    public void modifyContent(String tagName, String typeName, String xdocString, String title, Long id) {
+        Tags tag = resolveTags(tagName, true);
+        ClipsType type = resolveType(typeName, true);
+        ClipsArtle artle = loadClipArtle(id);
+        ClipsContent content = loadContent(id);
+        content.setContent(xdocString);
+        artle.setTitle(title);
+        artle.setTags(tag);
+        artle.setType(type);
+        artle.setContent(content);
+        contentRepository.save(content);
+        artleRepository.save(artle);
+    }
+
+    /**
+     * 读取摘录的数据
+     *
+     * @param id 摘录的id
+     * @return
+     */
+    @Transactional
+    public ClipsArtle loadClipArtle(Long id) {
+        ClipsArtle artle = artleRepository.getOne(id);
+        artle.getTitle();
+        artle.getContent();
+        artle.getTags();
+        artle.getType();
+        return artleRepository.getOne(id);
+    }
+
+    /**
+     * 读取标签
+     * @param tagName 标签名
+     * @param create 如果不存在是否创建
+     * @return 标签对象
+     */
+    public Tags resolveTags(String tagName,boolean create){
         Tags tag = tagsRepository.findByNameAndType(tagName, GlobalType.CLIPS);
-        if (tag == null) {
+        if (tag == null&&create) {
             tag = new Tags();
             tag.setName(tagName);
             tag.setGlobalType(GlobalType.CLIPS);
             tag = tagsRepository.save(tag);
         }
-        // 读取类型，没有就创建
+        return tag;
+    }
+
+    /**
+     * 读取摘录类型
+     *
+     * @param typeName 类型名
+     * @param create   没有的时候是否创建
+     * @return 类型对象
+     */
+    public ClipsType resolveType(String typeName,boolean create){
         ClipsType type = typeRepository.findByName(typeName);
-        if (type == null) {
+        if (type == null&&create) {
             type = new ClipsType();
             type.setName(typeName);
             type.setArtles(new ArrayList<>());
             type = typeRepository.save(type);
         }
+        return type;
+    }
+
+    /**
+     * 存储内容
+     */
+    public void saveContent(String tagName, String typeName, String xdocString, String title) {
+        // 读取目标的标签，没有就创建
+        Tags tag = resolveTags(tagName, true);
+        // 读取类型，没有就创建
+        ClipsType type = resolveType(typeName,true);
         //创建内容实例
         ClipsArtle artle = new ClipsArtle();
         artle.setType(type);
         artle.setCreateDate(new Date());
         artle.setTags(tag);
         artle.setTitle(title);
-
         ClipsContent content = new ClipsContent();
         content.setContent(xdocString);
-
         artle.setContent(content);
-
         artleRepository.save(artle);
         contentRepository.save(content);
     }

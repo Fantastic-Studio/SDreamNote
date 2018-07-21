@@ -4,6 +4,7 @@ import org.jb2011.lnf.beautyeye.ch3_button.BEButtonUI;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
+import org.swdc.note.entity.ClipsArtle;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.editor.PromptCombox;
 
@@ -16,9 +17,10 @@ import java.util.Arrays;
 
 /**
  * 保存的时候的类型选择对话框
+ * 摘录保存的时候使用
  */
 @Component
-public class SaveDialog extends JDialog {
+public class ClipsSaveDialog extends JDialog {
 
     @Autowired
     private ClipsService clipsService;
@@ -32,7 +34,12 @@ public class SaveDialog extends JDialog {
 
     private JButton btnSave = new JButton("保存记录");
 
-    public SaveDialog() {
+    /**
+     * 当前保存的id
+     */
+    private Long currId;
+
+    public ClipsSaveDialog() {
         this.setContentPane(contentPanel);
         contentPanel.setLayout(null);
         this.setResizable(false);
@@ -82,7 +89,7 @@ public class SaveDialog extends JDialog {
         cbxType.removeAllItems();
         clipsService.getTypeList().forEach(item -> cbxType.addItem(item));
         cbxTags.removeAllItems();
-        clipsService.getTags().forEach(item -> cbxTags.addItem(item));
+        clipsService.getClipsTags().forEach(item -> cbxTags.addItem(item));
     }
 
     /**
@@ -94,20 +101,43 @@ public class SaveDialog extends JDialog {
      */
     public void showSave(JComponent component, String xmlContent, String title) {
         this.setLocationRelativeTo(component);
+
+        if (currId != null) {
+            ClipsArtle artle = clipsService.loadClipArtle(currId);
+            cbxTags.setSelectedItem(artle.getTags().getName());
+            cbxType.setSelectedItem(artle.getType().getName());
+        }
+
+        // 处理保存
         btnSave.addActionListener(e -> {
             if (this.cbxType.getSelectedItem() == null || this.cbxType.getSelectedItem().trim().equals("")) {
                 JOptionPane.showMessageDialog(this, "请填写或者选择一个类型，这个不能空下。");
                 return;
             }
-            if (cbxTags.getSelectedItem() == null || cbxTags.getSelectedItem().trim().equals("")) {
-                clipsService.saveContent("无标签", cbxType.getSelectedItem(), xmlContent, title);
+            // 判别添加和修改
+            if (currId == null) {
+                if (cbxTags.getSelectedItem() == null || cbxTags.getSelectedItem().trim().equals("")) {
+                    clipsService.saveContent("无标签", cbxType.getSelectedItem(), xmlContent, title);
+                } else {
+                    clipsService.saveContent(cbxTags.getSelectedItem(), cbxType.getSelectedItem(), xmlContent, title);
+                }
             } else {
-                clipsService.saveContent(cbxTags.getSelectedItem(), cbxType.getSelectedItem(), xmlContent, title);
+                clipsService.modifyContent(cbxTags.getSelectedItem(), cbxType.getSelectedItem(), xmlContent, title, currId);
             }
+            // 清理数据
             this.setVisible(false);
             Arrays.asList(btnSave.getActionListeners()).forEach(item -> btnSave.removeActionListener(item));
+            currId = null;
         });
         this.setVisible(true);
     }
 
+    /**
+     * 打开对话框前的数据准备
+     *
+     * @param id
+     */
+    public void prepare(Long id) {
+        this.currId = id;
+    }
 }

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.*;
 import org.swdc.note.service.ClipsService;
+import org.swdc.note.ui.ReadFrm;
 import org.swdc.note.ui.common.TableModel;
 
 import javax.annotation.PostConstruct;
@@ -37,6 +38,9 @@ public class SCenterPane extends JPanel {
 
     @Autowired
     private ClipsService clipsService;
+
+    @Autowired
+    private ReadFrm readFrm;
 
     /**
      * 主窗口的工具栏
@@ -96,6 +100,11 @@ public class SCenterPane extends JPanel {
         this.table.setModel(tableModel);
     }
 
+    /**
+     * 为主面板下方的内容面板载入数据
+     *
+     * @param id
+     */
     public void loadContent(Long id) {
         try {
             switch (currType) {
@@ -133,6 +142,7 @@ public class SCenterPane extends JPanel {
                 docViewer.setPreferredSize(new Dimension(pane.getWidth(), (pane.getHeight() / 12) * 6));
             }
         });
+        // table的鼠标事件
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -148,6 +158,7 @@ public class SCenterPane extends JPanel {
                 }
             }
         });
+        // 焦点事件
         table.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
@@ -159,4 +170,5 @@ public class SCenterPane extends JPanel {
             }
         });
     }
+
 }

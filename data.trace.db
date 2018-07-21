@@ -1,0 +1,3 @@
+2018-07-15 16:34:27 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "TAGS" not found; SQL statement:
+SELECT * FROM tags [42102-196]

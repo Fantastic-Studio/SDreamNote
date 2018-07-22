@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.*;
 import org.swdc.note.service.ClipsService;
-import org.swdc.note.ui.ReadFrm;
 import org.swdc.note.ui.common.TableModel;
 
 import javax.annotation.PostConstruct;
@@ -39,8 +38,15 @@ public class SCenterPane extends JPanel {
     @Autowired
     private ClipsService clipsService;
 
-    @Autowired
-    private ReadFrm readFrm;
+    /**
+     * 当前展示的摘录的类型
+     */
+    private ClipsType clipsType;
+
+    /**
+     * 当前展示的标签
+     */
+    private Tags tags;
 
     /**
      * 主窗口的工具栏
@@ -82,6 +88,8 @@ public class SCenterPane extends JPanel {
      */
     public void loadItemsOfClips(ClipsType type, Tags tag) {
         currType = GlobalType.CLIPS;
+        tags = tag;
+        clipsType = type;
         List<ClipsArtle> artles = clipsService.getArtlesOf(type, tag);
         TableModel tableModel = new TableModel(ClipsArtle.class);
         tableModel.setColumnIdentifiers(new String[]{
@@ -98,6 +106,20 @@ public class SCenterPane extends JPanel {
                         item.getCreateDate().toString()
                 }));
         this.table.setModel(tableModel);
+    }
+
+    /**
+     * 刷新列表
+     */
+    public void refreshItems() {
+        switch (this.currType) {
+            case CLIPS:
+                if (clipsType != null && tags != null) {
+                    loadItemsOfClips(this.clipsType, this.tags);
+                    table.clearSelection();
+                }
+                break;
+        }
     }
 
     /**

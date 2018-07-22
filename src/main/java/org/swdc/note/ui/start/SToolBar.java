@@ -52,6 +52,9 @@ public class SToolBar extends JToolBar {
     @Autowired
     private ClipsService clipsService;
 
+    @Autowired
+    private SCenterPane centerPane;
+
     private GlobalType currType;
 
     private Long currId;
@@ -152,6 +155,18 @@ public class SToolBar extends JToolBar {
                 editorForm.setVisible(true);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
+            }
+        });
+        // 删除
+        deleteBtn.addActionListener(e -> {
+            if (currId != null) {
+                switch (currType) {
+                    case CLIPS:
+                        clipsService.deleteClip(currId);
+                        centerPane.refreshItems();
+                        enableItemsTool(false, null, null);
+                        break;
+                }
             }
         });
     }

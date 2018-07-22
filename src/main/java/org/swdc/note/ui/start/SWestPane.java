@@ -9,6 +9,7 @@ import org.swdc.note.entity.ClipsType;
 import org.swdc.note.entity.GlobalType;
 import org.swdc.note.entity.Tags;
 import org.swdc.note.service.ClipsService;
+import org.swdc.note.ui.common.DatePanel;
 import org.swdc.note.ui.common.TreeNode;
 
 import javax.annotation.PostConstruct;
@@ -33,6 +34,8 @@ public class SWestPane extends JPanel {
     private JScrollPane taskScrollPane = new JScrollPane(taskPane);
     private JTaskPaneGroup taskGroup = new JTaskPaneGroup();
 
+    private DatePanel datePanel = new DatePanel();
+
     @Autowired
     private ClipsService clipsService;
 
@@ -46,6 +49,7 @@ public class SWestPane extends JPanel {
     public SWestPane() {
         this.setLayout(new BorderLayout());
         tabbedPane.add("摘录", scrollPane);
+        tabbedPane.add("日记", datePanel);
         typeTree.setRootVisible(false);
         this.add(tabbedPane, BorderLayout.NORTH);
         this.add(taskScrollPane, BorderLayout.CENTER);
@@ -58,6 +62,7 @@ public class SWestPane extends JPanel {
         tabbedPane.setFont(font);
         taskGroup.setTitle("书简");
         taskGroup.setFont(font);
+        datePanel.setFonts(font);
         this.taskPane.add(taskGroup);
     }
 
@@ -70,6 +75,7 @@ public class SWestPane extends JPanel {
                 SWestPane pane = SWestPane.this;
                 tabbedPane.setPreferredSize(new Dimension(pane.getWidth(), (pane.getHeight() / 12) * 7));
                 taskScrollPane.setPreferredSize(new Dimension(pane.getWidth(), (pane.getHeight() / 12) * 5));
+                datePanel.setPreferredSize(new Dimension(pane.getWidth(), (pane.getHeight() / 12) * 7));
             }
         });
         // 监听摘录的树的选择，更新中心面板
@@ -85,6 +91,9 @@ public class SWestPane extends JPanel {
                     centerPane.loadItemsOfClips(type, (Tags) node.getUserObject());
                 }
             }
+        });
+        datePanel.addSelectListener(e -> {
+            System.out.println(e.getSelectDate());
         });
     }
 

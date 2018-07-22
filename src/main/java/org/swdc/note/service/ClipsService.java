@@ -169,6 +169,19 @@ public class ClipsService {
     }
 
     /**
+     * 删除一条记录
+     *
+     * @param artleId 记录的id
+     */
+    @Transactional
+    public void deleteClip(Long artleId) {
+        ClipsArtle artle = loadClipArtle(artleId);
+        ClipsContent content = artle.getContent();
+        contentRepository.delete(content);
+        artleRepository.delete(artle);
+    }
+
+    /**
      * 读取摘录类型
      *
      * @param typeName 类型名

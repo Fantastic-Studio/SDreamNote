@@ -10,6 +10,7 @@ import org.swdc.note.entity.ClipsContent;
 import org.swdc.note.entity.GlobalType;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.start.PromptTextField;
+import org.swdc.note.ui.start.SCenterPane;
 import org.swdc.note.ui.start.SWestPane;
 
 import javax.annotation.PostConstruct;
@@ -33,6 +34,9 @@ public class EditorForm extends JFrame {
 
     @Autowired
     private ClipsService clipsService;
+
+    @Autowired
+    private SCenterPane centerPane;
 
     private XDocEditor editor = new XDocEditor();
 
@@ -90,6 +94,7 @@ public class EditorForm extends JFrame {
                     westPane.dataRefresh();
                     // 刷新保存对话框的分类和标签
                     clipsSaveDialog.initData();
+                    centerPane.refreshItems();
                     // 清理数据
                     currId = null;
                     currType = null;

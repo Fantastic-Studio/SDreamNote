@@ -2,10 +2,11 @@ package org.swdc.note.ui.start;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.swdc.note.config.BCrypt;
 import org.swdc.note.config.UIConfig;
-import org.swdc.note.entity.ClipsContent;
 import org.swdc.note.entity.GlobalType;
 import org.swdc.note.service.ClipsService;
+import org.swdc.note.service.DailyService;
 import org.swdc.note.ui.EditorForm;
 import org.swdc.note.ui.ReadFrm;
 
@@ -16,6 +17,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.*;
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * 主窗口的工具栏
@@ -51,6 +53,9 @@ public class SToolBar extends JToolBar {
 
     @Autowired
     private ClipsService clipsService;
+
+    @Autowired
+    private DailyService dailyService;
 
     @Autowired
     private SCenterPane centerPane;
@@ -138,9 +143,32 @@ public class SToolBar extends JToolBar {
             try {
                 switch (currType) {
                     case CLIPS:
-                        ClipsContent content = clipsService.loadContent(currId);
-                        readFrm.prepare(content.getContent());
-                        readFrm.setVisible(true);
+                        Optional.ofNullable(clipsService.loadContent(currId)).ifPresent(content -> {
+                            try {
+                                readFrm.prepare(content.getContent());
+                                readFrm.setVisible(true);
+                            } catch (Exception ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        });
+                        break;
+                    case DELAY:
+                        Optional.ofNullable(dailyService.loadContent(currId)).ifPresent(artle -> {
+                            try {
+                                if (artle.getCheckQuestion() == null || artle.getCheckQuestion().equals("")) {
+                                    readFrm.prepare(artle.getContent().getContent());
+                                    readFrm.setVisible(true);
+                                } else {
+                                    String answer = JOptionPane.showInputDialog(SToolBar.this, "请问：" + artle.getCheckQuestion() + "？");
+                                    if (BCrypt.checkpw(answer, artle.getAnswer())) {
+                                        readFrm.prepare(artle.getContent().getContent());
+                                        readFrm.setVisible(true);
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        });
                         break;
                 }
             } catch (Exception ex) {
@@ -166,9 +194,56 @@ public class SToolBar extends JToolBar {
                         centerPane.refreshItems();
                         enableItemsTool(false, null, null);
                         break;
+                    case DELAY:
+                        Optional.ofNullable(dailyService.loadContent(currId)).ifPresent(artle -> {
+                            if (artle.getCheckQuestion() == null || artle.getCheckQuestion().equals("")) {
+                                dailyService.deleteArtle(currId);
+                                centerPane.refreshItems();
+                                enableItemsTool(false, null, null);
+                            } else {
+                                String answer = JOptionPane.showInputDialog(SToolBar.this, "请问" + artle.getCheckQuestion());
+                                if (BCrypt.checkpw(answer, artle.getAnswer())) {
+                                    dailyService.deleteArtle(currId);
+                                    centerPane.refreshItems();
+                                    enableItemsTool(false, null, null);
+                                } else {
+                                    JOptionPane.showMessageDialog(SToolBar.this, "很抱歉，你没有删除此记录的权限。");
+                                }
+                            }
+                        });
+                        break;
                 }
             }
         });
+
+        exportBtn.addActionListener(e -> {
+            if (currId == null) {
+                return;
+            }
+            switch (currType) {
+                case CLIPS:
+                    centerPane.loadContent(currId, null);
+                    centerPane.exportContent();
+                    break;
+                case DELAY:
+                    Optional.ofNullable(dailyService.loadContent(currId)).ifPresent(artle -> {
+                        if (artle.getCheckQuestion() == null || artle.getCheckQuestion().trim().equals("")) {
+                            centerPane.loadContent(currId, null);
+                            centerPane.exportContent();
+                        } else {
+                            String answer = JOptionPane.showInputDialog(SToolBar.this, "请问" + artle.getCheckQuestion() + "?");
+                            if (BCrypt.checkpw(answer, artle.getAnswer())) {
+                                centerPane.loadContent(currId, answer);
+                                centerPane.exportContent();
+                            }
+                        }
+                    });
+                    break;
+            }
+            centerPane.refreshItems();
+            enableItemsTool(false, null, null);
+        });
+
     }
 
     /**

@@ -4,9 +4,11 @@ import com.hg.xdoc.XDoc;
 import com.hg.xdoc.XDocViewer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.swdc.note.config.BCrypt;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.*;
 import org.swdc.note.service.ClipsService;
+import org.swdc.note.service.DailyService;
 import org.swdc.note.ui.common.TableModel;
 
 import javax.annotation.PostConstruct;
@@ -14,7 +16,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 主窗口的中心面板，
@@ -37,6 +41,14 @@ public class SCenterPane extends JPanel {
 
     @Autowired
     private ClipsService clipsService;
+
+    @Autowired
+    private DailyService dailyService;
+
+    @Autowired
+    private SWestPane westPane;
+
+    private Date selCurrDate;
 
     /**
      * 当前展示的摘录的类型
@@ -109,9 +121,32 @@ public class SCenterPane extends JPanel {
     }
 
     /**
+     * 日记类别的选择改变后，调用此方法加载列表。
+     */
+    public void loadItemsOfDaily(Date selDate) {
+        this.selCurrDate = selDate;
+        this.currType = GlobalType.DELAY;
+        List<DailyArtle> artles = dailyService.getArtlesOf(selDate);
+        TableModel model = new TableModel(DailyArtle.class);
+        model.setColumnIdentifiers(new String[]{
+                "序列ID", "标题", "收录时间"
+        });
+        artles.forEach(item ->
+                model.addRow(new String[]{
+                        item.getId() + "",
+                        item.getTitle(),
+                        item.getDateCreated().toString()
+                }));
+        table.setModel(model);
+    }
+
+    /**
      * 刷新列表
      */
     public void refreshItems() {
+        if (currType == null) {
+            currType = westPane.getCurrentGlobalType();
+        }
         switch (this.currType) {
             case CLIPS:
                 if (clipsType != null && tags != null) {
@@ -119,21 +154,55 @@ public class SCenterPane extends JPanel {
                     table.clearSelection();
                 }
                 break;
+            case DELAY:
+                loadItemsOfDaily(Optional.ofNullable(selCurrDate).orElse(new Date()));
+                table.clearSelection();
+                break;
         }
     }
 
     /**
      * 为主面板下方的内容面板载入数据
      *
-     * @param id
+     * @param id  被加载的目标的id
+     * @param pwd 被加载目标的验证问题 不写的话会自己弹框问
      */
-    public void loadContent(Long id) {
+    public void loadContent(Long id, String pwd) {
         try {
+
             switch (currType) {
                 case CLIPS:
-                    ClipsContent content = clipsService.loadContent(id);
-                    XDoc doc = new XDoc(content.getContent());
-                    docViewer.open(doc);
+                    Optional.ofNullable(clipsService.loadContent(id)).ifPresent(artle -> {
+                        try {
+                            XDoc doc = new XDoc(artle.getContent());
+                            docViewer.open(doc);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                    break;
+                case DELAY:
+                    Optional.ofNullable(dailyService.loadContent(id)).ifPresent(artle -> {
+                        try {
+                            if (artle.getCheckQuestion() == null || artle.getCheckQuestion().equals("")) {
+                                XDoc doc = new XDoc(artle.getContent().getContent());
+                                docViewer.open(doc);
+                            } else if (pwd != null) {
+                                if (BCrypt.checkpw(pwd, artle.getAnswer())) {
+                                    XDoc doc = new XDoc(artle.getContent().getContent());
+                                    docViewer.open(doc);
+                                }
+                            } else {
+                                String answer = JOptionPane.showInputDialog(SCenterPane.this, "请问：" + artle.getCheckQuestion() + "?");
+                                if (BCrypt.checkpw(answer, artle.getAnswer())) {
+                                    XDoc doc = new XDoc(artle.getContent().getContent());
+                                    docViewer.open(doc);
+                                }
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                     break;
                 default:
                     return;
@@ -148,6 +217,10 @@ public class SCenterPane extends JPanel {
         Font font = config.getFontMini().deriveFont(Font.PLAIN, 14);
         table.setFont(font);
         table.getTableHeader().setFont(font);
+    }
+
+    public void exportContent() {
+        docViewer.save();
     }
 
     /**
@@ -176,7 +249,7 @@ public class SCenterPane extends JPanel {
                 Long id = Long.valueOf(table.getModel().getValueAt(row, 0).toString());
                 toolBar.enableItemsTool(true, currType, id);
                 if (e.getClickCount() == 2) {
-                    loadContent(id);
+                    loadContent(id, null);
                 }
             }
         });
@@ -192,5 +265,4 @@ public class SCenterPane extends JPanel {
             }
         });
     }
-
 }

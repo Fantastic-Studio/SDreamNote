@@ -11,6 +11,7 @@ import org.swdc.note.entity.Tags;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.common.DatePanel;
 import org.swdc.note.ui.common.TreeNode;
+import sun.reflect.generics.tree.Tree;
 
 import javax.annotation.PostConstruct;
 import javax.swing.*;
@@ -18,6 +19,8 @@ import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * 描述主窗口左侧的面板
@@ -79,21 +82,21 @@ public class SWestPane extends JPanel {
             }
         });
         // 监听摘录的树的选择，更新中心面板
-        typeTree.addTreeSelectionListener(e -> {
-            if (e.getOldLeadSelectionPath() == null || e.getNewLeadSelectionPath() == null) {
-                return;
-            }
-            Object obj = e.getNewLeadSelectionPath().getLastPathComponent();
-            if (obj instanceof TreeNode) {
-                TreeNode node = (TreeNode) obj;
-                if (node.getUserObject() instanceof Tags) {
-                    ClipsType type = (ClipsType) ((TreeNode) e.getOldLeadSelectionPath().getLastPathComponent()).getUserObject();
-                    centerPane.loadItemsOfClips(type, (Tags) node.getUserObject());
+        typeTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Object obj = typeTree.getLastSelectedPathComponent();
+                if (obj instanceof TreeNode) {
+                    TreeNode node = (TreeNode) obj;
+                    if (node.getUserObject() instanceof Tags) {
+                        ClipsType type = (ClipsType) ((TreeNode) node.getParent()).getUserObject();
+                        centerPane.loadItemsOfClips(type, (Tags) node.getUserObject());
+                    }
                 }
             }
         });
         datePanel.addSelectListener(e -> {
-            System.out.println(e.getSelectDate());
+            centerPane.loadItemsOfDaily(e.getSelectDate());
         });
     }
 
@@ -112,6 +115,8 @@ public class SWestPane extends JPanel {
         switch (name) {
             case "摘录":
                 return GlobalType.CLIPS;
+            case "日记":
+                return GlobalType.DELAY;
         }
         return null;
     }

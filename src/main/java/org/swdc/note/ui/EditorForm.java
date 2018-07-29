@@ -4,11 +4,14 @@ import com.hg.xdoc.XDoc;
 import com.hg.xdoc.XDocEditor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.swdc.note.config.BCrypt;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.ClipsArtle;
 import org.swdc.note.entity.ClipsContent;
+import org.swdc.note.entity.DailyArtle;
 import org.swdc.note.entity.GlobalType;
 import org.swdc.note.service.ClipsService;
+import org.swdc.note.service.DailyService;
 import org.swdc.note.ui.start.PromptTextField;
 import org.swdc.note.ui.start.SCenterPane;
 import org.swdc.note.ui.start.SWestPane;
@@ -19,6 +22,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Optional;
 
 /**
  * 编辑内容的窗口
@@ -30,10 +34,16 @@ public class EditorForm extends JFrame {
     private ClipsSaveDialog clipsSaveDialog;
 
     @Autowired
+    private DailysSaveDialog dailysSaveDialog;
+
+    @Autowired
     private SWestPane westPane;
 
     @Autowired
     private ClipsService clipsService;
+
+    @Autowired
+    private DailyService dailyService;
 
     @Autowired
     private SCenterPane centerPane;
@@ -115,6 +125,9 @@ public class EditorForm extends JFrame {
                 case CLIPS:
                     clipsSaveDialog.showSave(contentPane, editor.getXDoc().toXml(), titleField.getText());
                     break;
+                case DELAY:
+                    dailysSaveDialog.showSave(contentPane, editor.getXDoc().toXml(), titleField.getText());
+                    break;
             }
         });
     }
@@ -133,13 +146,45 @@ public class EditorForm extends JFrame {
                 this.currId = artleId;
                 this.currType = type;
                 if (artleId != null) {
-                    ClipsArtle artle = clipsService.loadClipArtle(artleId);
-                    ClipsContent content = artle.getContent();
-                    editor.setXDoc(new XDoc(content.getContent()));
-                    titleField.setText(artle.getTitle());
+                    Optional.ofNullable(clipsService.loadClipArtle(artleId)).ifPresent(artle -> {
+                        try {
+                            ClipsContent content = artle.getContent();
+                            editor.setXDoc(new XDoc(content.getContent()));
+                            titleField.setText(artle.getTitle());
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                 }
                 // 初始化摘录的存储窗口
                 clipsSaveDialog.prepare(artleId);
+                break;
+            case DELAY:
+                this.currId = artleId;
+                this.currType = type;
+                if (artleId != null) {
+                    Optional.ofNullable(dailyService.loadContent(artleId)).ifPresent(artle -> {
+                        try {
+                            if (artle.getCheckQuestion() == null || artle.getCheckQuestion().trim().equals("")) {
+                                editor.setXDoc(new XDoc(artle.getContent().getContent()));
+                                titleField.setText(artle.getTitle());
+                                dailysSaveDialog.prepare(currId);
+                            } else {
+                                String answer = JOptionPane.showInputDialog(EditorForm.this, "请问" + artle.getCheckQuestion() + "?");
+                                if (BCrypt.checkpw(answer, artle.getAnswer())) {
+                                    editor.setXDoc(new XDoc(artle.getContent().getContent()));
+                                    titleField.setText(artle.getTitle());
+                                    dailysSaveDialog.prepare(currId);
+                                } else {
+                                    JOptionPane.showMessageDialog(EditorForm.this, "验证失败，你没有权限修改此记录。");
+                                    this.currId = null;
+                                }
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
                 break;
         }
     }

@@ -3,6 +3,7 @@ package org.swdc.note.ui;
 import com.hg.xdoc.XDoc;
 import com.hg.xdoc.XDocEditor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.BCrypt;
 import org.swdc.note.config.UIConfig;
@@ -12,6 +13,7 @@ import org.swdc.note.entity.DailyArtle;
 import org.swdc.note.entity.GlobalType;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.service.DailyService;
+import org.swdc.note.ui.listener.DataRefreshEvent;
 import org.swdc.note.ui.start.PromptTextField;
 import org.swdc.note.ui.start.SCenterPane;
 import org.swdc.note.ui.start.SWestPane;
@@ -37,16 +39,13 @@ public class EditorForm extends JFrame {
     private DailysSaveDialog dailysSaveDialog;
 
     @Autowired
-    private SWestPane westPane;
-
-    @Autowired
     private ClipsService clipsService;
 
     @Autowired
     private DailyService dailyService;
 
     @Autowired
-    private SCenterPane centerPane;
+    private ApplicationContext context;
 
     private XDocEditor editor = new XDocEditor();
 
@@ -100,11 +99,10 @@ public class EditorForm extends JFrame {
                     editor = new XDocEditor();
                     add(editor, BorderLayout.CENTER);
                     titleField.setText(titleField.getPrompt());
-                    // 刷新主面板树形控件
-                    westPane.dataRefresh();
-                    // 刷新保存对话框的分类和标签
+                    // 刷新主面板
+                    DataRefreshEvent refreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TREE);
+                    context.publishEvent(refreshEvent);
                     clipsSaveDialog.initData();
-                    centerPane.refreshItems();
                     // 清理数据
                     currId = null;
                     currType = null;
@@ -139,7 +137,7 @@ public class EditorForm extends JFrame {
      */
     public void prepare(Long artleId, GlobalType type) throws Exception {
         if (type == null) {
-            type = westPane.getCurrentGlobalType();
+            type = SWestPane.getCurrType();
         }
         switch (type) {
             case CLIPS:

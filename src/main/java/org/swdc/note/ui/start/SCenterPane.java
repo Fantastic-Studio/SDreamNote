@@ -3,6 +3,7 @@ package org.swdc.note.ui.start;
 import com.hg.xdoc.XDoc;
 import com.hg.xdoc.XDocViewer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.BCrypt;
 import org.swdc.note.config.UIConfig;
@@ -10,6 +11,7 @@ import org.swdc.note.entity.*;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.service.DailyService;
 import org.swdc.note.ui.common.TableModel;
+import org.swdc.note.ui.listener.DataRefreshEvent;
 
 import javax.annotation.PostConstruct;
 import javax.swing.*;
@@ -40,13 +42,13 @@ public class SCenterPane extends JPanel {
     private XDocViewer docViewer = new XDocViewer();
 
     @Autowired
+    private ApplicationContext context;
+
+    @Autowired
     private ClipsService clipsService;
 
     @Autowired
     private DailyService dailyService;
-
-    @Autowired
-    private SWestPane westPane;
 
     private Date selCurrDate;
 
@@ -59,12 +61,6 @@ public class SCenterPane extends JPanel {
      * 当前展示的标签
      */
     private Tags tags;
-
-    /**
-     * 主窗口的工具栏
-     */
-    @Autowired
-    private SToolBar toolBar;
 
     /**
      * 当前展示的数据的全局类型
@@ -145,7 +141,7 @@ public class SCenterPane extends JPanel {
      */
     public void refreshItems() {
         if (currType == null) {
-            currType = westPane.getCurrentGlobalType();
+            currType = SWestPane.getCurrType();
         }
         switch (this.currType) {
             case CLIPS:
@@ -228,7 +224,11 @@ public class SCenterPane extends JPanel {
      */
     @PostConstruct
     public void regListener() {
-        toolBar.enableItemsTool(false, null, null);
+        DataRefreshEvent refreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TOOL);
+        refreshEvent.setGlobalType(null);
+        refreshEvent.setId(null);
+        refreshEvent.setEnable(false);
+        context.publishEvent(refreshEvent);
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -243,11 +243,19 @@ public class SCenterPane extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 int row = table.getSelectedRow();
                 if (row == -1) {
-                    toolBar.enableItemsTool(false, null, null);
+                    DataRefreshEvent refreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TOOL);
+                    refreshEvent.setGlobalType(null);
+                    refreshEvent.setId(null);
+                    refreshEvent.setEnable(false);
+                    context.publishEvent(refreshEvent);
                     return;
                 }
                 Long id = Long.valueOf(table.getModel().getValueAt(row, 0).toString());
-                toolBar.enableItemsTool(true, currType, id);
+                DataRefreshEvent refreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TOOL);
+                refreshEvent.setGlobalType(currType);
+                refreshEvent.setId(id);
+                refreshEvent.setEnable(true);
+                context.publishEvent(refreshEvent);
                 if (e.getClickCount() == 2) {
                     loadContent(id, null);
                 }
@@ -258,9 +266,13 @@ public class SCenterPane extends JPanel {
             @Override
             public void focusLost(FocusEvent e) {
                 int row = table.getSelectedRow();
-                if (row != -1 && !toolBar.isFocused()) {
+                if (row != -1 && !SToolBar.isFocused()) {
                     table.clearSelection();
-                    toolBar.enableItemsTool(false, null, null);
+                    DataRefreshEvent refreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TOOL);
+                    refreshEvent.setGlobalType(null);
+                    refreshEvent.setId(null);
+                    refreshEvent.setEnable(false);
+                    context.publishEvent(refreshEvent);
                 }
             }
         });

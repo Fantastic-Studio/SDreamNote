@@ -2,7 +2,9 @@ package org.swdc.note.ui.start;
 
 import com.l2fprod.common.swing.JTaskPane;
 import com.l2fprod.common.swing.JTaskPaneGroup;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.UIConfig;
 import org.swdc.note.entity.ClipsType;
@@ -11,7 +13,7 @@ import org.swdc.note.entity.Tags;
 import org.swdc.note.service.ClipsService;
 import org.swdc.note.ui.common.DatePanel;
 import org.swdc.note.ui.common.TreeNode;
-import sun.reflect.generics.tree.Tree;
+import org.swdc.note.ui.listener.DataRefreshEvent;
 
 import javax.annotation.PostConstruct;
 import javax.swing.*;
@@ -39,15 +41,14 @@ public class SWestPane extends JPanel {
 
     private DatePanel datePanel = new DatePanel();
 
+    @Getter
+    private static GlobalType currType;
+
     @Autowired
     private ClipsService clipsService;
 
-    /**
-     * 树节点改变的时候会影响中间的面板，
-     * 需要通知他刷新
-     */
     @Autowired
-    private SCenterPane centerPane;
+    private ApplicationContext context;
 
     public SWestPane() {
         this.setLayout(new BorderLayout());
@@ -56,6 +57,7 @@ public class SWestPane extends JPanel {
         typeTree.setRootVisible(false);
         this.add(tabbedPane, BorderLayout.NORTH);
         this.add(taskScrollPane, BorderLayout.CENTER);
+        currType = GlobalType.CLIPS;
     }
 
     @Autowired
@@ -90,14 +92,24 @@ public class SWestPane extends JPanel {
                     TreeNode node = (TreeNode) obj;
                     if (node.getUserObject() instanceof Tags) {
                         ClipsType type = (ClipsType) ((TreeNode) node.getParent()).getUserObject();
-                        centerPane.loadItemsOfClips(type, (Tags) node.getUserObject());
+                        // 发布刷新事件，刷新表格
+                        DataRefreshEvent dataRefreshEvent = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TABLE);
+                        dataRefreshEvent.setTags((Tags) node.getUserObject());
+                        dataRefreshEvent.setGlobalType(GlobalType.CLIPS);
+                        dataRefreshEvent.setClipsType(type);
+                        context.publishEvent(dataRefreshEvent);
                     }
                 }
             }
         });
         datePanel.addSelectListener(e -> {
-            centerPane.loadItemsOfDaily(e.getSelectDate());
+            // 发布事件，刷新表格
+            DataRefreshEvent event = new DataRefreshEvent(DataRefreshEvent.EventOf.REF_TABLE);
+            event.setGlobalType(GlobalType.DELAY);
+            event.setDate(e.getSelectDate());
+            context.publishEvent(event);
         });
+        tabbedPane.addChangeListener(e -> currType = getCurrentGlobalType());
     }
 
     @PostConstruct
@@ -110,7 +122,7 @@ public class SWestPane extends JPanel {
      *
      * @return
      */
-    public GlobalType getCurrentGlobalType() {
+    private GlobalType getCurrentGlobalType() {
         String name = tabbedPane.getTitleAt(tabbedPane.getSelectedIndex());
         switch (name) {
             case "摘录":

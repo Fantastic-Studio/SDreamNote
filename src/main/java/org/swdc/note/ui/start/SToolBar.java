@@ -1,5 +1,6 @@
 package org.swdc.note.ui.start;
 
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.swdc.note.config.BCrypt;
@@ -43,7 +44,8 @@ public class SToolBar extends JToolBar {
      * <p>
      * 这个判断标志主要用于中心面板SCenterPane
      */
-    private boolean focused;
+    @Getter
+    private static boolean focused;
 
     @Autowired
     private EditorForm editorForm;
@@ -260,10 +262,6 @@ public class SToolBar extends JToolBar {
         this.exportBtn.setEnabled(enable);
         this.currType = type;
         this.currId = id;
-    }
-
-    public boolean isFocused() {
-        return focused;
     }
 
 }
